@@ -1,3 +1,9 @@
+
+
+# Prima Classe per il cubo -> inutule per z3
+
+
+
 class Cube():
     def __init__(self):
         # rappresentazione del cubo 2x2 mediante 6 liste di 4 elementi
