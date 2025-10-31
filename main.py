@@ -1,74 +1,114 @@
 from z3 import *
+from time import sleep
 
 # /-------------------------------------------------------------\
 
-DEPTH = 3
+DEPTH = 10
 N_STICKER = 24
 N_MOV = 12
 
 # /-------------------------------------------------------------\
 
+mosse = ["U", "F", "R", "L", "B", "D"]
 # ogni perm[j][k] = indice dello sticker in S[i] che va in posizione k dopo la mossa j
 perm = { 
-    "U":
-    [
-        2, 0, 3, 1,
-        8, 9, 6, 7,
+    "U": [ 
+        2, 0, 3, 1, 
+        8, 9, 6, 7, 
         12, 13, 10, 11, 
-        16, 17, 14, 15,
-        4, 5, 18, 19,
-        20, 21, 22, 23
-    ],
+        16, 17, 14, 15, 
+        4, 5, 18, 19, 
+        20, 21, 22, 23 ],
+
+    "L": [ 
+        19, 1, 17, 3, 
+        6, 4, 7, 5,
+        0, 9, 2, 11, 
+        12, 13, 14, 15, 
+        16, 22, 18, 20, 
+        8, 21, 10, 23 ],
+
+    "F": [ 
+        0, 1, 7, 5, 
+        4, 20, 6, 21, 
+        10, 8, 11, 9, 
+        2, 13, 3, 15, 
+        16, 17, 18, 19, 
+        14, 12, 22, 23 ],
+
+    "R": [ 
+        0, 9, 2, 11, 
+        4, 5, 6, 7, 
+        8, 21, 10, 23, 
+        14, 12, 15, 13, 
+        3, 17, 1, 19, 
+        20, 18, 22, 16 ], 
+
+    "B": [ 
+        13, 15, 2, 3, 
+        1, 5, 0, 6, 
+        8, 9, 10, 11, 
+        12, 23, 14, 22, 
+        18, 16, 19, 17, 
+        20, 21, 15, 13 ],
+
+    "D": [ 
+        0, 1, 2, 3, 
+        4, 5, 18, 19, 
+        8, 9, 6, 7, 
+        12, 13, 10, 11, 
+        16, 17, 14, 15, 
+        22, 20, 23, 21 ],
+
+# --------------------------    
     
-     "F":
-    [
-        0, 1, 7, 5,   # U→F: gli sticker inferiori di U vanno su F (ma invertiti)
-        4, 20, 6, 21, # L→U e D→L
-        10, 8, 11, 9, # F ruota orario
-        2, 13, 3, 15,
-        16, 17, 18, 19,
-        14, 12, 22, 23
-    ],
-     
-    "R":
-    [
-        0, 9, 2, 11,   # U→B
-        4, 5, 6, 7,
-        8, 21, 10, 23,   # F→U
-        14, 12, 15, 13,   # R ruota orario
-        3, 17, 1, 19,   # B→D
-        20, 18, 22, 16
-    ],
-    
-    "L":
-    [
-        19, 1, 17, 3,   # F→U
-        6, 4, 7, 5,       # L ruota orario
-        0, 9, 2, 11,    # D→F
-        12, 13, 14, 15,
-        16, 22, 18, 20,     # U→B
-        8, 21, 10, 23
-    ], 
-    
-    "B":
-    [
-        13, 15, 2, 3,
-        1, 5, 0, 6,
-        8, 9, 10, 11,
-        12, 23, 14, 22,
-        18, 16, 19, 17,   # B ruota orario
-        20, 21, 15, 13      # scambio D e L (parte dietro)
-    ], 
-    
-    "D":
-    [
-        0, 1, 2, 3,
-        4, 5, 18, 19,
-        8, 9, 6, 7,
-        12, 13, 10, 11,
-        16, 17, 14, 15,
-        22, 20, 23, 21
-    ]
+    "U'": [ 
+        2, 0, 3, 1, 
+        8, 9, 6, 7, 
+        12, 13, 10, 11, 
+        16, 17, 14, 15, 
+        4, 5, 18, 19, 
+        20, 21, 22, 23 ],
+
+    "L'": [ 
+        19, 1, 17, 3, 
+        6, 4, 7, 5,
+        0, 9, 2, 11, 
+        12, 13, 14, 15, 
+        16, 22, 18, 20, 
+        8, 21, 10, 23 ],
+
+    "F'": [ 
+        0, 1, 7, 5, 
+        4, 20, 6, 21, 
+        10, 8, 11, 9, 
+        2, 13, 3, 15, 
+        16, 17, 18, 19, 
+        14, 12, 22, 23 ],
+
+    "R'": [ 
+        0, 9, 2, 11, 
+        4, 5, 6, 7, 
+        8, 21, 10, 23, 
+        14, 12, 15, 13, 
+        3, 17, 1, 19, 
+        20, 18, 22, 16 ], 
+
+    "B'": [ 
+        13, 15, 2, 3, 
+        1, 5, 0, 6, 
+        8, 9, 10, 11, 
+        12, 23, 14, 22, 
+        18, 16, 19, 17, 
+        20, 21, 15, 13 ],
+
+    "D'": [ 
+        0, 1, 2, 3, 
+        4, 5, 18, 19, 
+        8, 9, 6, 7, 
+        12, 13, 10, 11, 
+        16, 17, 14, 15, 
+        22, 20, 23, 21 ],
 }
 
 # /-------------------------------------------------------------\
@@ -90,17 +130,12 @@ def stato_iniziale(s, S):
     # cubo risolto
     stato = list(range(N_STICKER))
 
-    print_cubo(stato)
-
     # applico le permutazioni
     for ch in seq:
         if ch not in perm:
             print(f"Mossa '{ch}' ignorata (non valida)")
             continue
         stato = [stato[perm[ch][k]] for k in range(N_STICKER)]
-
-        print_cubo(stato)
-
 
     # aggiungo i vincoli allo stato iniziale
     for j in range(N_STICKER):
@@ -179,13 +214,27 @@ if __name__=='__main__':
 
 
     # TRANSIZIONI
-    for step in range(DEPTH):
-        for k in range(N_STICKER):
-            expr = S[step][k]
-            # creiamo la cascata di If per collegare transizione -> permutazione
-            for mov in range(N_MOV):
-                expr = If(T[step] == mov, S[step][perm[mov][k]], expr)
-            s.add(S[step+1][k] == expr)
+    ###### -> dobbiamo modificare ad ogni stato i, i k-esimi elementi rispetto al i-1, mediante la permutazione in perm
+    for passo in range(DEPTH):
+        for sticker_id in range(N_STICKER):
+
+            # valore predefinito: lo sticker rimane dove sta
+            nuovo_valore = S[passo][sticker_id]
+
+            # per ogni possibile mossa, costruiamo un If annidato
+            for mossa_id, mossa_nome in enumerate(mosse):
+                # Se la mossa scelta a questo passo è mossa_id,
+                # allora lo sticker sticker_id del nuovo stato
+                # viene da perm[mossa_nome][sticker_idx]
+                nuovo_valore = If(
+                    T[passo] == mossa_id,
+                    S[passo][perm[mossa_nome][sticker_id]],
+                    nuovo_valore
+                )
+
+            # il nuovo stato a (passo+1) deve rispettare questa relazione
+            s.add(S[passo + 1][sticker_id] == nuovo_valore)
+
 
 
     # ESECUZIONE
@@ -193,8 +242,9 @@ if __name__=='__main__':
         m = s.model()
         print("Transizioni scelte:")
         for i in range(DEPTH):
-            print(f"Step {i} -> T = {m[T[i]]}")
+            sleep(0.5)
+            codicemossa = int(m[T[i]].as_long())  # converte il valore Z3 in int
+            nome_mossa = mosse[codicemossa-1]
+            print(f"Step {i}: {nome_mossa}")
     else:
         print("Nessuna soluzione trovata.")
-
-
