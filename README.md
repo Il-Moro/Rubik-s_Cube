@@ -50,3 +50,4 @@ Ogni permutazione viene definita nel file **permutations.py**, assieme a una cod
 ### Solver
 
 Una volta definito il Solver, si utilizza `States[i][j]` per rappresentare tutti gli stati del cubo su DEPTH livelli, scelto dall'utente.
+
