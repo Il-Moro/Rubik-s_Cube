@@ -1,5 +1,5 @@
 def permutation():
-    mosse = ["U", "U'", "L", "L'", "F", "F'", "R", "R'", "B", "B'", "D", "D'"]
+    mosse = ["U", "U'", "L", "L'", "F", "F'", "R", "R'", "B", "B'", "D", "D'", "None"]
     # ogni perm[j][k] = indice dello sticker in S[i] che va in posizione k dopo la mossa j
     perm = { 
         "U": [ 
@@ -96,6 +96,8 @@ def permutation():
             12, 13, 18, 19, 
             16, 17, 6, 7, 
             21, 23, 20, 22 ],
+        "None": [i for i in range(24)]
+        
     }
 
     return mosse, perm

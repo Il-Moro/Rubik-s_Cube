@@ -93,17 +93,22 @@ if __name__=='__main__':
     print("Usage\n\t Inserire la profondità e le sequenza di mosse per modificare il cubo\n\t - example:\n\t\tprofondità:\t4\n\t\tsequenza:\tUB'URDR'L\n\n")
     print(">--------------------------< inizio programma >------------------------<\n\n")
     
-    
     DEPTH = int(input("\tprofondità:\t"))
-    solv = Solver()
-    States = variabili_di_stato()        
+    
+    # solver
+    solv = Optimize()
+
+    # variaboli stati
+    States = variabili_di_stato()
+
+    # variabili transizioni        
     Transaction = variabili_di_transizione()  
 
+    # variabili flag
+    Risolto = [Bool(f"R_{i}") for i in range(DEPTH+1)]
+
     # stato iniziale
-    solv = stato_iniziale(solv, States)        
-    
-    # stati finali
-    solv.add(stati_finali(States[DEPTH][:]))
+    solv = stato_iniziale(solv, States)
 
 
 
@@ -115,7 +120,7 @@ if __name__=='__main__':
 
     # Per ogni transizione, 0 <= transizione < N_MOV
     for i in range(DEPTH):
-        solv.add(And(Transaction[i] >= 0, Transaction[i] < N_MOV))
+        solv.add(And(Transaction[i] >= 0, Transaction[i] <= N_MOV))
 
     # Vincoli di unicità (sticker distinti)
     for i in range(DEPTH + 1):
@@ -128,10 +133,11 @@ if __name__=='__main__':
     for passo in range(DEPTH):
         for sticker_id in range(N_STICKER):
 
+            # intanto mi salvo lo stato corrente che poi verrà permutato
             nuovo_valore = States[passo][sticker_id]
 
             # per ogni possibile mossa, costruiamo un If annidato
-            for mossa_id, mossa_nome in enumerate(mosse):
+            for mossa_id, mossa_nome in enumerate(mosse): # troviamo qual è la permutazione sulla base della T scelta in quel momento dal solver
                 # Se la mossa scelta a questo passo è mossa_id,
                 # allora lo sticker sticker_id del nuovo stato
                 # viene da perm[mossa_nome][sticker_idx]
@@ -144,9 +150,17 @@ if __name__=='__main__':
     
     # TRANSAZIONE SUCCESSIVA != T PRECEDENTE INVERSA
     for i in range(1, DEPTH):
-        solv.add(Implies(Transaction[i] % 2 == 0, Transaction[i] != Transaction[i-1]+1))
-        solv.add(Implies(Transaction[i] % 2 != 0, Transaction[i] != Transaction[i-1]-1))
+        solv.add(Or(
+            Transaction[i-1] % 2 == 0,
+            Transaction[i] != Transaction[i-1] + 1
+        ))
+        solv.add(Or(
+            Transaction[i-1] % 2 != 0,
+            Transaction[i] != Transaction[i-1] - 1
+        ))
 
+    for i in range(DEPTH):
+       solv.add(Risolto[i] == stati_finali(States[i])) 
     
 
     # per ogni passo i, se il cubo è già risolto, allora lo stato successivo resta uguale
@@ -156,24 +170,29 @@ if __name__=='__main__':
                 stati_finali(States[i]),  # vincolo “stato i è finale”
                 And(
                     [States[i+1][j] == States[i][j] for j in range(N_STICKER)] +  # stato successivo uguale
-                    [Transaction[i+1] == -1]  # transizione neutra
+                    [Transaction[i+1] == N_MOV]  # transizione neutra
                 )
             )
         )
 
 
+    # ottimizzare per evitare che il solver usi esattamente DEPTH mosse
+    solv.minimize(Sum([If(Risolto[i], i, DEPTH) for i in range(DEPTH+1)]))
+
+
     # ESECUZIONE MODELLO
     if solv.check() == sat:
         m = solv.model()
-        print("Transizioni scelte:")
-
         # Stampa lo stato iniziale
         print("\n--- Stato 0 (iniziale) ---")
         print_cubo([m.evaluate(States[0][j]).as_long() for j in range(24)], True)
 
+        print("Transizioni scelte:")
         for i in range(DEPTH):
             codicemossa = int(m[Transaction[i]].as_long())
             nome_mossa = mosse[codicemossa]
+            if nome_mossa == "None":
+                break
             print(f"\nStep {i+1}: {nome_mossa}")
 
             # Stampa lo stato dopo la mossa
