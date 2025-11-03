@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
         Stato = [Stato[i] for i in perm[move]]
         print_cubo(Stato, True)
+        print_cubo(Stato)
 
 # /-------------------------------------------------------------\
     

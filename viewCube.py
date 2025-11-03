@@ -24,12 +24,12 @@ def print_cubo(stato, usa_colori=False):
 
     if usa_colori:
         ansi = {
-            "W": "\033[97m■\033[0m",
-            "B": "\033[94m■\033[0m",
-            "R": "\033[91m■\033[0m",
-            "G": "\033[92m■\033[0m",
-            "O": "\033[33m■\033[0m",
-            "Y": "\033[93m■\033[0m"
+            "W": "\033[38;2;255;255;255m■\033[0m",   # bianco
+            "B": "\033[38;2;0;102;255m■\033[0m",     # blu saturo
+            "R": "\033[38;2;255;30;30m■\033[0m",     # rosso vivo
+            "G": "\033[38;2;0;200;0m■\033[0m",       # verde brillante
+            "O": "\033[38;2;255;128;0m■\033[0m",     # arancione pieno
+            "Y": "\033[38;2;255;230;0m■\033[0m"      # giallo acceso
         }
         def get_char(idx): return ansi[colore(stato[idx])]
     else:
