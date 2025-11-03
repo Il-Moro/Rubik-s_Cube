@@ -53,3 +53,28 @@ def print_cubo(stato, usa_colori=False):
     print()
 
 # /-------------------------------------------------------------\
+
+
+def print_cubo_numeri(stato):
+    
+    # Utility per stampare una riga con offset
+    def riga(offset, vals):
+        print(" " * offset + " ".join(f"{v:02}" for v in vals))
+
+    # U
+    riga(6, stato[0:2])
+    riga(6, stato[2:4])
+
+    # L, F, R, B
+    for r in range(2):
+        print(" ".join(
+            f"{v:02}" for v in stato[4 + 4*0 + 2*r : 4 + 4*0 + 2*r + 2] +  # L
+            stato[8 + 4*0 + 2*r : 8 + 4*0 + 2*r + 2] +                    # F
+            stato[12 + 4*0 + 2*r : 12 + 4*0 + 2*r + 2] +                  # R
+            stato[16 + 4*0 + 2*r : 16 + 4*0 + 2*r + 2]                    # B
+        ))
+
+    # D
+    riga(6, stato[20:22])
+    riga(6, stato[22:24])
+    print()

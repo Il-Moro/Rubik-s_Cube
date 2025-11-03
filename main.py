@@ -1,7 +1,7 @@
 from z3 import *
 from time import sleep
 from permutation import permutation
-from viewCube import print_cubo
+from viewCube import print_cubo, print_cubo_numeri
 
 # /-------------------------------------------------------------\
 
@@ -55,8 +55,6 @@ def stato_iniziale(s, S):
             continue
         
         stato = [stato[perm[r][k]] for k in range(N_STICKER)]
-    
-    print_cubo(stato, True)
 
     # aggiungo i vincoli allo stato iniziale
     for j in range(N_STICKER):
@@ -64,7 +62,7 @@ def stato_iniziale(s, S):
 
     return s
 
-
+'''
 def stati_finali(States):
     # STATO FINALE (cubo risolto)
     # cubo risolto quando al primo elemento S[F][j] == 0, con j = 0+4k con k = 0,1,2,3,4,5 tutti gli elementi che seguono sono in ordine crescente (ripartendo dall'inizio dell'array quando gli elementi finiscono)
@@ -72,13 +70,17 @@ def stati_finali(States):
     for k in range(6): 
         start = 4 * k
         rotazioni_possibili.append(
-            And([
-                States[(start + j) % 24] == j
-                for j in range(24)
-            ])
+            And([ States[(start + j) % 24] == j for j in range(24) ])
         )
     return Or(rotazioni_possibili)
+'''
 
+def stati_finali(States):
+    # STATO FINALE (cubo risolto)
+    # cubo risolto quando al primo elemento S[F][j] == 0, con j = 0+4k con k = 0,1,2,3,4,5 tutti gli elementi che seguono sono in ordine crescente (ripartendo dall'inizio dell'array quando gli elementi finiscono)
+    cond_finale = And([ States[j] == j for j in range(24) ])
+    
+    return Or(cond_finale)
 # /-------------------------------------------------------------\
 
 
@@ -114,7 +116,7 @@ if __name__=='__main__':
 
     # Vincoli di dominio
     # Per ogni sticker, 0 <= sticker < N_STICKER
-    for i in range(DEPTH + 1):
+    for i in range(DEPTH):
         for j in range(N_STICKER):
             solv.add(And(States[i][j] >= 0, States[i][j] < N_STICKER))
 
@@ -123,7 +125,7 @@ if __name__=='__main__':
         solv.add(And(Transaction[i] >= 0, Transaction[i] <= N_MOV))
 
     # Vincoli di unicità (sticker distinti)
-    for i in range(DEPTH + 1):
+    for i in range(DEPTH):
         solv.add(Distinct(States[i]))
 
 
@@ -150,34 +152,47 @@ if __name__=='__main__':
     
     # TRANSAZIONE SUCCESSIVA != T PRECEDENTE INVERSA
     for i in range(1, DEPTH):
-        solv.add(Or(
-            Transaction[i-1] % 2 == 0,
-            Transaction[i] != Transaction[i-1] + 1
-        ))
-        solv.add(Or(
-            Transaction[i-1] % 2 != 0,
-            Transaction[i] != Transaction[i-1] - 1
-        ))
+        solv.add(Or( Transaction[i-1] % 2 == 0, Transaction[i] != Transaction[i-1] + 1 ))
+        solv.add(Or( Transaction[i-1] % 2 != 0, Transaction[i] != Transaction[i-1] - 1 ))
 
-    for i in range(DEPTH):
-       solv.add(Risolto[i] == stati_finali(States[i])) 
-    
+    # flag Risolto[i] = True se stato i è finale
+    for i in range(1, DEPTH+1):
+        solv.add(Risolto[i] == stati_finali(States[i]))
 
-    # per ogni passo i, se il cubo è già risolto, allora lo stato successivo resta uguale
-    for i in range(DEPTH - 1):  # attenzione: T[i+1] esiste solo fino a DEPTH-1
+    # blocca le mosse successive se Risolto[i] è True
+    for i in range(1, DEPTH-1):
         solv.add(
             Implies(
-                stati_finali(States[i]),  # vincolo “stato i è finale”
+                Risolto[i],
                 And(
-                    [States[i+1][j] == States[i][j] for j in range(N_STICKER)] +  # stato successivo uguale
-                    [Transaction[i+1] == N_MOV]  # transizione neutra
+                    *[States[i+1][j] == States[i][j] for j in range(N_STICKER)],
+                    Transaction[i+1] == N_MOV  # "None"
                 )
             )
         )
 
+    for i in range(1, DEPTH):
+        # se Risolto[i] è True, allora tutte le transizioni successive diventano "None"
+        for j in range(i+1, DEPTH):
+            solv.add(
+                Implies(
+                    Risolto[i],
+                    Transaction[j] == N_MOV
+                )
+            )
+            solv.add(
+                Implies(
+                    Risolto[i],
+                    And(*[States[j+1][k] == States[j][k] for k in range(N_STICKER)])
+                )
+            )
+
+
+    # almeno uno stato deve essere finale
+    solv.add(Or([Risolto[i] for i in range(1, DEPTH+1)]))
 
     # ottimizzare per evitare che il solver usi esattamente DEPTH mosse
-    solv.minimize(Sum([If(Risolto[i], i, DEPTH) for i in range(DEPTH+1)]))
+    solv.minimize(Sum([If(Risolto[i], i, DEPTH) for i in range(1, DEPTH+1)]))
 
 
     # ESECUZIONE MODELLO
@@ -197,6 +212,8 @@ if __name__=='__main__':
 
             # Stampa lo stato dopo la mossa
             print_cubo([m.evaluate(States[i+1][j]).as_long() for j in range(24)], True)
+
+            print_cubo_numeri([m.evaluate(States[i+1][j]).as_long() for j in range(24)])
     else:
         print("Nessuna soluzione trovata.")
 
