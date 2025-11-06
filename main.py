@@ -26,11 +26,11 @@ mosse, perm = permutation()
 def variabili_di_stato():
     # i -> i-esimo stato
     # j -> j-esimo sticker
-    return [[Int(f"S_{i}_{j}") for j in range(N_STICKER)] for i in range(DEPTH + 1)]
+    return [[Int(f"S_{j}_{i}") for i in range(N_STICKER)] for j in range(DEPTH)]
 
 def variabili_di_transizione():
     # una transizione per ogni passo 
-    return [Int(f"T_{i}") for i in range(DEPTH)]
+    return [Int(f"T_{j}") for j in range(DEPTH)]
 
 
 def stato_iniziale(s, S):
@@ -64,7 +64,7 @@ def stato_iniziale(s, S):
 
     return s
 
-'''
+
 def stati_finali(States):
     # STATO FINALE (cubo risolto)
     # cubo risolto quando al primo elemento S[F][j] == 0, con j = 0+4k con k = 0,1,2,3,4,5 tutti gli elementi che seguono sono in ordine crescente (ripartendo dall'inizio dell'array quando gli elementi finiscono)
@@ -75,13 +75,15 @@ def stati_finali(States):
             And([ States[(start + j) % 24] == j for j in range(24) ])
         )
     return Or(rotazioni_possibili)
-'''
 
+
+'''
 def stati_finali(States):
     # STATO FINALE (cubo risolto)
     # cubo risolto quando al primo elemento S[F][j] == 0, con j = 0+4k con k = 0,1,2,3,4,5 tutti gli elementi che seguono sono in ordine crescente (ripartendo dall'inizio dell'array quando gli elementi finiscono)
     cond_finale = And([ States[i] == i for i in range(24) ])
     return Or(cond_finale)
+'''
 # /-------------------------------------------------------------\
 
 
@@ -96,7 +98,7 @@ if __name__=='__main__':
     print("Usage\n\t Inserire la profondità e le sequenza di mosse per modificare il cubo\n\t - example:\n\t\tprofondità:\t4\n\t\tsequenza:\tUB'URDR'L\n\n")
     print(">--------------------------< inizio programma >------------------------<\n\n")
     
-    DEPTH = int(input("\tprofondità:\t"))
+    DEPTH = int(input("\tprofondità:\t"))+1
     
     # solver
     solv = Optimize()
@@ -141,7 +143,13 @@ if __name__=='__main__':
                 )
             )
         else:
-            solv.add(Implies(Risolto[j], Transaction[j] == N_MOV))
+            solv.add(
+                Implies(Risolto[j], 
+                    And(
+                        Transaction[j] == N_MOV
+                        )
+                    )
+                )
 
 
         # TRANSIZIONI
@@ -162,7 +170,8 @@ if __name__=='__main__':
                 )
 
             # il nuovo stato a (j+1) deve rispettare questa relazione
-            solv.add(States[j + 1][i] == nuovo_valore)
+            if j != DEPTH-1:
+                solv.add(States[j + 1][i] == nuovo_valore)
 
 
         # transizioni successive
