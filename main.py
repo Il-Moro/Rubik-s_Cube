@@ -34,31 +34,33 @@ def variabili_di_transizione():
 
 
 def stato_iniziale(s, S):
-    seq = input("\tsequenza:\t").strip().upper()
+    seq = input("\tsequenza:\t").strip().upper() # strip() rimuovo spacing
 
-    # cubo risolto: identità
+    # stato del cubo a partire da quello risolto
     stato = list(range(N_STICKER))
 
     rotations = []
-    # applico le permutazioni
     n = len(seq)
+    
+    # estrapolo i singoli comandi
     for i in range(n):
         if (seq[i] != "'") and i != n-1 and (seq[i+1] == "'"):
             rotations.append(seq[i] + "'")
             i += 1
         elif seq[i] != "'":
             rotations.append(seq[i])
-
+    
+    #applico le permutazioni
     for r in rotations:
         if r not in perm:
             print(f"Mossa '{r}' ignorata (non valida)")
             continue
-        
-        stato = [stato[perm[r][k]] for k in range(N_STICKER)]
+        else:
+            stato = [stato[perm[r][k]] for k in range(N_STICKER)]
 
     # aggiungo i vincoli allo stato iniziale
-    for j in range(N_STICKER):
-        s.add(S[0][j] == stato[j])
+    for i in range(N_STICKER):
+        s.add(S[0][i] == stato[i])
 
     return s
 
@@ -78,8 +80,7 @@ def stati_finali(States):
 def stati_finali(States):
     # STATO FINALE (cubo risolto)
     # cubo risolto quando al primo elemento S[F][j] == 0, con j = 0+4k con k = 0,1,2,3,4,5 tutti gli elementi che seguono sono in ordine crescente (ripartendo dall'inizio dell'array quando gli elementi finiscono)
-    cond_finale = And([ States[j] == j for j in range(24) ])
-    
+    cond_finale = And([ States[i] == i for i in range(24) ])
     return Or(cond_finale)
 # /-------------------------------------------------------------\
 
@@ -107,92 +108,86 @@ if __name__=='__main__':
     Transaction = variabili_di_transizione()  
 
     # variabili flag
-    Risolto = [Bool(f"R_{i}") for i in range(DEPTH+1)]
+    Risolto = [Bool(f"R_{i}") for i in range(DEPTH)]
+
+
 
     # stato iniziale
     solv = stato_iniziale(solv, States)
 
 
+    
+    for j in range(DEPTH):
+        # Vincoli di dominio
+        # Per ogni sticker, 0 <= sticker < N_STICKER    
+        for i in range(N_STICKER):
+            solv.add(And(States[j][i] >= 0, States[j][i] < N_STICKER))
+        
+        # Per ogni transizione, 0 <= transizione < N_MOV
+        solv.add(And(Transaction[j] >= 0, Transaction[j] <= N_MOV))
 
-    # Vincoli di dominio
-    # Per ogni sticker, 0 <= sticker < N_STICKER
-    for i in range(DEPTH):
-        for j in range(N_STICKER):
-            solv.add(And(States[i][j] >= 0, States[i][j] < N_STICKER))
+         # Vincoli di unicità (sticker distinti)
+        solv.add(Distinct(States[j])) 
 
-    # Per ogni transizione, 0 <= transizione < N_MOV
-    for i in range(DEPTH):
-        solv.add(And(Transaction[i] >= 0, Transaction[i] <= N_MOV))
+        # condizione su stati finali
+        if j != DEPTH-1:
+            solv.add(
+                Implies(
+                    Risolto[j],
+                    And(
+                        *[States[j+1][i] == States[j][i] for i in range(N_STICKER)],
+                        Transaction[j+1] == N_MOV  # "None"
+                    )
+                )
+            )
+        else:
+            solv.add(Implies(Risolto[j], Transaction[j] == N_MOV))
 
-    # Vincoli di unicità (sticker distinti)
-    for i in range(DEPTH):
-        solv.add(Distinct(States[i]))
 
+        # TRANSIZIONI
+        # ogni transazione è una permutazione dello stato precedente
+        ###### -> dobbiamo modificare ad ogni stato i, i k-esimi elementi rispetto al i-1, mediante la permutazione in perm
+        for i in range(N_STICKER):
 
-    # TRANSIZIONI
-    # ogni transazione è una permutazione dello stato precedente
-    ###### -> dobbiamo modificare ad ogni stato i, i k-esimi elementi rispetto al i-1, mediante la permutazione in perm
-    for passo in range(DEPTH):
-        for sticker_id in range(N_STICKER):
-
-            # intanto mi salvo lo stato corrente che poi verrà permutato
-            nuovo_valore = States[passo][sticker_id]
+            # mi salvo lo sticker corrente
+            nuovo_valore = States[j][i]
 
             # per ogni possibile mossa, costruiamo un If annidato
-            for mossa_id, mossa_nome in enumerate(mosse): # troviamo qual è la permutazione sulla base della T scelta in quel momento dal solver
+            for mossa_codice, mossa_nome in enumerate(mosse): # troviamo qual è la permutazione sulla base della T scelta in quel momento dal solver
                 # Se la mossa scelta a questo passo è mossa_id,
                 # allora lo sticker sticker_id del nuovo stato
-                # viene da perm[mossa_nome][sticker_idx]
+                # viene da perm[mossa_nome][i]
                 nuovo_valore = If(
-                    Transaction[passo] == mossa_id, States[passo][perm[mossa_nome][sticker_id]], nuovo_valore
+                    Transaction[j] == mossa_codice, States[j][perm[mossa_nome][i]], nuovo_valore
                 )
 
-            # il nuovo stato a (passo+1) deve rispettare questa relazione
-            solv.add(States[passo + 1][sticker_id] == nuovo_valore)
-    
-    # TRANSAZIONE SUCCESSIVA != T PRECEDENTE INVERSA
-    for i in range(1, DEPTH):
-        solv.add(Or( Transaction[i-1] % 2 == 0, Transaction[i] != Transaction[i-1] + 1 ))
-        solv.add(Or( Transaction[i-1] % 2 != 0, Transaction[i] != Transaction[i-1] - 1 ))
+            # il nuovo stato a (j+1) deve rispettare questa relazione
+            solv.add(States[j + 1][i] == nuovo_valore)
 
-    # flag Risolto[i] = True se stato i è finale
-    for i in range(1, DEPTH+1):
-        solv.add(Risolto[i] == stati_finali(States[i]))
 
-    # blocca le mosse successive se Risolto[i] è True
-    for i in range(1, DEPTH-1):
-        solv.add(
-            Implies(
-                Risolto[i],
-                And(
-                    *[States[i+1][j] == States[i][j] for j in range(N_STICKER)],
-                    Transaction[i+1] == N_MOV  # "None"
-                )
-            )
-        )
-
-    for i in range(1, DEPTH):
-        # se Risolto[i] è True, allora tutte le transizioni successive diventano "None"
-        for j in range(i+1, DEPTH):
+        # transizioni successive
+        if j != 0:
             solv.add(
                 Implies(
-                    Risolto[i],
-                    Transaction[j] == N_MOV
+                    Transaction[j-1] < N_MOV,
+                    And(
+                        Implies(Transaction[j-1] % 2 == 0, Transaction[j] != Transaction[j-1] + 1),
+                        Implies(Transaction[j-1] % 2 == 1, Transaction[j] != Transaction[j-1] - 1),
+                    )
                 )
             )
-            solv.add(
-                Implies(
-                    Risolto[i],
-                    And(*[States[j+1][k] == States[j][k] for k in range(N_STICKER)])
-                )
-            )
+
+        # condizione su risolto 
+        solv.add(Risolto[j] == stati_finali(States[j]))
 
 
     # almeno uno stato deve essere finale
-    solv.add(Or([Risolto[i] for i in range(1, DEPTH+1)]))
+    solv.add(Or([Risolto[j] for j in range(DEPTH)]))
+
 
     # ottimizzare per evitare che il solver usi esattamente DEPTH mosse
-    solv.minimize(Sum([If(Risolto[i], i, DEPTH) for i in range(1, DEPTH+1)]))
+    solv.minimize(Sum([If(Risolto[j], j, DEPTH) for j in range(DEPTH)]))
+
 
 
     # ESECUZIONE MODELLO
