@@ -28,6 +28,7 @@ def variabili_di_stato():
     # j -> j-esimo sticker
     return [[Int(f"S_{j}_{i}") for i in range(N_STICKER)] for j in range(DEPTH)]
 
+
 def variabili_di_transizione():
     # una transizione per ogni passo 
     return [Int(f"T_{j}") for j in range(DEPTH)]
@@ -117,7 +118,6 @@ if __name__=='__main__':
     # stato iniziale
     solv = stato_iniziale(solv, States)
 
-
     
     for j in range(DEPTH):
         # Vincoli di dominio
@@ -128,7 +128,7 @@ if __name__=='__main__':
         # Per ogni transizione, 0 <= transizione < N_MOV
         solv.add(And(Transaction[j] >= 0, Transaction[j] <= N_MOV))
 
-         # Vincoli di unicità (sticker distinti)
+        # Vincoli di unicità (sticker distinti)
         solv.add(Distinct(States[j])) 
 
         # condizione su stati finali
@@ -161,6 +161,7 @@ if __name__=='__main__':
             nuovo_valore = States[j][i]
 
             # per ogni possibile mossa, costruiamo un If annidato
+            # enumarate contatore a un enumerabile
             for mossa_codice, mossa_nome in enumerate(mosse): # troviamo qual è la permutazione sulla base della T scelta in quel momento dal solver
                 # Se la mossa scelta a questo passo è mossa_id,
                 # allora lo sticker sticker_id del nuovo stato
